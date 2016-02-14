@@ -1,3 +1,10 @@
+/*
+ * mpc - Micro Parser Combinator library for c
+ *
+ * https://github.com/orangeduck/mpc
+ */
+
+
 #include "mpc.h"
 
 // State Type

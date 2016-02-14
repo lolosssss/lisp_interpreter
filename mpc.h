@@ -1,5 +1,7 @@
 /*
  * mpc - Micro Parser Combinator library for c
+ *
+ * https://github.com/orangeduck/mpc
  */
 
 #ifndef __MPC_H

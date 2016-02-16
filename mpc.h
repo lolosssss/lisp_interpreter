@@ -82,7 +82,7 @@ int mpc_parse_contents(const char *filename, mpc_parser_t *p, mpc_result_t *r);
 // Function Types
 typedef void (*mpc_dtor_t)(mpc_val_t *);
 typedef mpc_val_t *(*mpc_ctor_t)(void);
-typedef mpc_val_t *(*mpc_apply_t)(mpc_val_t *, void *);
+typedef mpc_val_t *(*mpc_apply_t)(mpc_val_t *);
 typedef mpc_val_t *(*mpc_apply_to_t)(mpc_val_t *, void *);
 typedef mpc_val_t *(*mpc_fold_t)(int, mpc_val_t **);
 

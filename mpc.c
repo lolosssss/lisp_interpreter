@@ -788,3 +788,248 @@ struct mpc_parser_t {
     char type;
     mpc_pdata_t data;
 };
+
+
+// Stack Type
+typedef struct {
+    int parsers_num;
+    int parsers_slots;
+    mpc_parser_t **parsers;
+    int *states;
+    int results_num;
+    int results_slots;
+    mpc_result_t *results;
+    int *returns;
+    mpc_err_t *err;
+} mpc_stack_t;
+
+static mpc_stack_t *mpc_stack_new(const char *filename)
+{
+    mpc_stack_t *s = malloc(sizeof(mpc_stack_t));
+
+    s->parsers_num = 0;
+    s->parsers_slots = 0;
+    s->parsers = NULL;
+    s->states = NULL;
+
+    s->results_num = 0;
+    s->results_slots = 0;
+    s->results = NULL;
+    s->returns = NULL;
+
+    s->err = mpc_err_fail(filename, mpc_state_invalid(), "Unknown Error");
+
+    return s;
+}
+
+static void mpc_stack_err(mpc_stack_t *s, mpc_err_t *e)
+{
+    mpc_err_t *errs[2];
+    errs[0] = s->err;
+    errs[1] = e;
+    s->err = mpc_err_or(errs, 2);
+}
+
+static int mpc_stack_terminate(mpc_stack_t *s, mpc_result_t *r)
+{
+    int success = s->returns[0];
+
+    if (success)
+    {
+        r->output = s->results[0].output;
+        mpc_err_delete(s->err);
+    }
+    else
+    {
+        mpc_stack_err(s, s->results[0].error);
+        r->error = s->err;
+    }
+
+    free(s->parsers);
+    free(s->states);
+    free(s->results);
+    free(s->returns);
+    free(s);
+
+    return success;
+}
+
+
+// Stack Parser Stuff
+static void mpc_stack_set_state(mpc_stack_t *s, int x)
+{
+    s->states[s->parsers_num - 1] = x;
+}
+
+static void mpc_stack_parsers_reserve_more(mpc_stack_t *s)
+{
+    if (s->parsers_num > s->parsers_slots)
+    {
+        s->parsers_slots = ceil((s->parsers_slots + 1) * 1.5);
+        s->parsers = realloc(s->parsers, sizeof(mpc_parser_t *) * s->parsers_slots);
+        s->states = realloc(s->states, sizeof(int) * s->parsers_slots);
+    }
+}
+
+static void mpc_stack_parsers_reserve_less(mpc_stack_t *s)
+{
+    if (s->parsers_slots > pow(s->parsers_num + 1, 1.5))
+    {
+        s->parsers_slots = floor(s->parsers_slots - 1) * (1.0 / 1.5);
+        s->parsers = realloc(s->parsers, sizeof(mpc_parser_t *) * s->parsers_slots);
+        s->states = realloc(s->states, sizeof(int) * s->parsers_slots);
+    }
+}
+
+static void mpc_stack_pushp(mpc_stack_t *s, mpc_parser_t *p)
+{
+    s->parsers_num++;
+    mpc_stack_parsers_reserve_more(s);
+    s->parsers[s->parsers_num - 1] = p;
+    s->states[s->parsers_num - 1] = 0;
+}
+
+static void mpc_stack_popp(mpc_stack_t *s, mpc_parser_t **p, int *st)
+{
+    *p = s->parsers[s->parsers_num - 1];
+    *st = s->states[s->parsers_num - 1];
+    s->parsers_num--;
+    mpc_stack_parsers_reserve_less(s);
+}
+
+static void mpc_stack_peeepp(mpc_stack_t *s, mpc_parser_t **p, int *st)
+{
+    *p = s->parsers[s->parsers_num - 1];
+    *st = s->states[s->parsers_num - 1];
+}
+
+static int mpc_stack_empty(mpc_stack_t *s)
+{
+    return s->parsers_num = 0;
+}
+
+
+// Stack Result Stuff
+static mpc_result_t mpc_result_err(mpc_err_t *e)
+{
+    mpc_result_t r;
+    r.error = e;
+
+    return r;
+}
+
+static mpc_result_t mpc_result_out(mpc_val_t *x)
+{
+    mpc_result_t r;
+    r.output = x;
+
+    return r;
+}
+
+static void mpc_stack_results_reserve_more(mpc_stack_t *s)
+{
+    if (s->results_num > s->results_slots)
+    {
+        s->results_slots = ceil((s->results_slots + 1) * 1.5);
+        s->results = realloc(s->results, sizeof(mpc_result_t) * s->results_slots);
+        s->returns = realloc(s->returns, sizeof(int) *s->results_slots);
+    }
+}
+
+static void mpc_stack_results_reserve_less(mpc_stack_t *s)
+{
+    if (s->results_slots > pow(s->results_num + 1, 1.5))
+    {
+        s->results_slots = floor(s->results_slots - 1) * (1.0 / 1.5);
+        s->results = realloc(s->results, sizeof(mpc_result_t) * s->results_slots);
+        s->returns = realloc(s->returns, sizeof(int) * s->results_slots);
+    }
+}
+
+static void mpc_stack_pushr(mpc_stack_t *s, mpc_result_t x, int r)
+{
+    s->results_num++;
+    mpc_stack_results_reserve_more(s);
+    s->results[s->results_num - 1] = x;
+    s->returns[s->results_num - 1] = r;
+}
+
+static int mpc_stack_popr(mpc_stack_t *s, mpc_result_t *x)
+{
+    int r;
+    *x = s->results[s->results_num - 1];
+    r = s->returns[s->results_num - 1];
+    s->results_num--;
+    mpc_stack_results_reserve_less(s);
+
+    return r;
+}
+
+static int mpc_stack_peekr(mpc_stack_t *s, mpc_result_t *x)
+{
+    *x = s->results[s->results_num - 1];
+    return s->returns[s->results_num - 1];
+}
+
+static void mpc_stack_popr_err(mpc_stack_t *s, int n)
+{
+    mpc_result_t x;
+
+    while (n)
+    {
+        mpc_stack_popr(s, &x);
+        mpc_stack_err(s, x.error);
+        n--;
+    }
+}
+
+static void mpc_stack_popr_out(mpc_stack_t *s, int n, mpc_dtor_t *ds)
+{
+    mpc_result_t x;
+
+    while (n)
+    {
+        mpc_stack_popr(s, &x);
+        ds[n - 1](x.output);
+        n--;
+    }
+}
+
+static void mpc_stack_popr_out_single(mpc_stack_t *s, int n, mpc_dtor_t dx)
+{
+    mpc_result_t x;
+
+    while (n)
+    {
+        mpc_stack_popr(s, &x);
+        dx(x.output);
+        n--;
+    }
+}
+
+static void mpc_stack_popr_n(mpc_stack_t *s, int n)
+{
+    mpc_result_t x;
+
+    while (n)
+    {
+        mpc_stack_popr(s, &x);
+        n--;
+    }
+}
+
+static mpc_val_t *mpc_stack_merger_out(mpc_stack_t *s, int n, mpc_fold_t f)
+{
+    mpc_val_t *x = f(n, (mpc_val_t **)(&s->results[s->results_num - n]));
+    mpc_stack_popr_n(s, n);
+
+    return x;
+}
+
+static mpc_err_t *mpc_stack_merger_err(mpc_stack_t *s, int n)
+{
+    mpc_err_t *x = mpc_err_or((mpc_err_t **)(&s->results[s->results_num - n]), n);
+    mpc_stack_popr_n(s, n);
+
+    return x;
+}

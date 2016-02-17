@@ -1347,3 +1347,53 @@ int mpc_parse_input(mpc_input_t *i, mpc_parser_t *init, mpc_result_t *final)
 #undef MPC_SUCCESS
 #undef MPC_FAILURE
 #undef MPC_PRIMATIVE
+
+
+int mpc_parse(const char *filename, const char *string, mpc_parser_t *p, mpc_result_t *r)
+{
+    int x;
+    mpc_input_t *i = mpc_input_new_string(filename, string);
+    x = mpc_parse_input(i, p, r);
+    mpc_input_delete(i);
+
+    return x;
+}
+
+int mpc_parse_file(const char *filename, FILE *file, mpc_parser_t *p, mpc_result_t *r)
+{
+    int x;
+    mpc_input_t *i = mpc_input_new_file(filename, file);
+    x = mpc_parse_input(i, p, r);
+    mpc_input_delete(i);
+
+    return x;
+}
+
+int mpc_parse_pipe(const char *filename, FILE *pipe, mpc_parser_t *p, mpc_result_t *r)
+{
+    int x;
+    mpc_input_t *i = mpc_input_new_pipe(filename, pipe);
+    x = mpc_parse_input(i, p, r);
+    mpc_input_delete(i);
+
+    return x;
+}
+
+int mpc_parse_contents(const char *filename, mpc_parser_t *p, mpc_result_t *r)
+{
+    FILE *f = fopen(filename, "rb");
+    int res;
+
+    if (f == NULL)
+    {
+        r->output = NULL;
+        r->error = mpc_err_fail(filename, mpc_state_new(), "Unbale to open file!");
+
+        return 0;
+    }
+
+    res = mpc_parse_file(filename, f, p, r);
+    fclose(f);
+
+    return res;
+}

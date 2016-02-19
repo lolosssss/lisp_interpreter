@@ -1397,3 +1397,179 @@ int mpc_parse_contents(const char *filename, mpc_parser_t *p, mpc_result_t *r)
 
     return res;
 }
+
+
+// Building a Parser
+static void mpc_undefine_unretained(mpc_parser_t *p, int force);
+
+static void mpc_undefine_or(mpc_parser_t *p)
+{
+    int i;
+    for (i = 0; i < p->data.or.n; i++)
+    {
+        mpc_undefine_unretained(p->data.or.xs[i], 0);
+    }
+
+    free(p->data.or.xs);
+}
+
+static void mpc_undefine_and(mpc_parser_t *p)
+{
+    int i;
+
+    for (i = 0; i < p->data.and.n; i++)
+    {
+        mpc_undefine_unretained(p->data.and.xs[i], 0);
+    }
+
+    free(p->data.and.xs);
+    free(p->data.and.dxs);
+}
+
+static void mpc_undefine_unretained(mpc_parser_t *p, int force)
+{
+    if (p->retained && !force)
+        return;
+
+    switch (p->type)
+    {
+        case MPC_TYPE_FAIL: free(p->data.fail.m); break;
+        case MPC_TYPE_ONEOF:
+        case MPC_TYPE_NONEOF:
+        case MPC_TYPE_STRING:
+            free(p->data.string.x);
+            break;
+        case MPC_TYPE_APPLY: mpc_undefine_unretained(p->data.apply.x, 0); break;
+        case MPC_TYPE_APPLY_TO: mpc_undefine_unretained(p->data.apply_to.x, 0); break;
+        case MPC_TYPE_PREDICT: mpc_undefine_unretained(p->data.predict.x, 0); break;
+        case MPC_TYPE_MAYBE:
+        case MPC_TYPE_NOT:
+            mpc_undefine_unretained(p->data.not.x, 0); break;
+        case MPC_TYPE_EXPECT:
+            mpc_undefine_unretained(p->data.expect.x, 0);
+            free(p->data.expect.m);
+            break;
+        case MPC_TYPE_MANY:
+        case MPC_TYPE_MANY1:
+        case MPC_TYPE_COUNT:
+            mpc_undefine_unretained(p->data.repeat.x, 0);
+            break;
+        case MPC_TYPE_OR: mpc_undefine_or(p); break;
+        case MPC_TYPE_AND: mpc_undefine_and(p); break;
+        default: break;
+    }
+
+    if (!force)
+    {
+        free(p->name);
+        free(p);
+    }
+}
+
+void mpc_delete(mpc_parser_t *p)
+{
+    if (p->retained)
+    {
+        if (p->type != MPC_TYPE_UNDEFINED)
+        {
+            mpc_undefine_unretained(p, 0);
+        }
+
+        free(p->name);
+        free(p);
+    }
+    else
+    {
+        mpc_undefine_unretained(p, 0);
+    }
+}
+
+static void mpc_soft_delete(mpc_val_t *x)
+{
+    mpc_undefine_unretained(x, 0);
+}
+
+static mpc_parser_t *mpc_undefined(void)
+{
+    mpc_parser_t *p = calloc(1, sizeof(mpc_parser_t));
+    p->retained = 0;
+    p->type = MPC_TYPE_UNDEFINED;
+    p->name = NULL;
+
+    return p;
+}
+
+mpc_parser_t *mpc_new(const char *name)
+{
+    mpc_parser_t *p = mpc_undefined();
+    p->retained = 1;
+    p->name = realloc(p->name, strlen(name) + 1);
+    strcpy(p->name, name);
+
+    return p;
+}
+
+mpc_parser_t *mpc_undefine(mpc_parser_t *p)
+{
+    mpc_undefine_unretained(p, 1);
+    p->type = MPC_TYPE_UNDEFINED;
+    return p;
+}
+
+mpc_parser_t *mpc_define(mpc_parser_t *p, mpc_parser_t *a)
+{
+    if (p->retained)
+    {
+        p->type = a->type;
+        p->data = a->data;
+    }
+    else
+    {
+        mpc_parser_t *a2 = mpc_failf("Attemp to assing to Unretained Parser!");
+        p->type = a2->type;
+        p->data = a2->data;
+        free(a2);
+    }
+    free(a);
+    return p;
+}
+
+void mpc_cleanup(int n, ...)
+{
+    int i;
+    mpc_parser_t **list = malloc(sizeof(mpc_parser_t *) * n);
+
+    va_list va;
+
+    va_start(va, n);
+    for (i = 0; i < n; i++)
+        list[i] = va_arg(va, mpc_parser_t *);
+
+    for (i = 0; i < n; i++)
+        mpc_undefine(list[i]);
+
+    for (i = 0; i < n; i++)
+        mpc_delete(list[i]);
+
+    va_end(va);
+
+    free(list);
+}
+
+mpc_parser_t *mpc_pass(void)
+{
+    mpc_parser_t *p = mpc_undefined();
+    p->type = MPC_TYPE_PASS;
+
+    return p;
+}
+
+mpc_parser_t *mpc_fail(const char *m)
+{
+    mpc_parser_t *p = mpc_undefined();
+    p->type = MPC_TYPE_FAIL;
+    p->data.fail.m = malloc(strlen(m) + 1);
+    strcpy(p->data.fail.m, m);
+
+    return p;
+}

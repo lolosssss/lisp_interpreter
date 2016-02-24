@@ -329,6 +329,8 @@ int main(void)
     mpc_parser_t *Expr = mpc_new("expr");
     mpc_parser_t *Lisp = mpc_new("lisp");
 
+    printf("hello world");
+
     mpca_lang(MPCA_LANG_DEFAULT,
               "                                        \
               number : /-?[0-9]+/ ;                    \

@@ -329,11 +329,13 @@ int main(void)
     mpc_parser_t *Expr = mpc_new("expr");
     mpc_parser_t *Lisp = mpc_new("lisp");
 
+
+    // TODO : segmentfault here
     mpca_lang(MPCA_LANG_DEFAULT,
               "                                        \
               number : /-?[0-9]+/ ;                    \
               symbol : '+' | '-' | '*' | '/' ;         \
-              sexpr  : '(' <expr>* ')' '               \
+              sexpr  : '(' <expr>* ')' ;               \
               expr   : <number> | <symbol> | <sexpr> ; \
               lisp   : /^/ <expr>+ /$/ ;               \
               ",

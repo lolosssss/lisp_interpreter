@@ -1,11 +1,14 @@
 /*
- * mpc - Micro Parser Combinator library for c
- *
- * https://github.com/orangeduck/mpc
- */
+** mpc - Micro Parser Combinator library for C
+**
+** https://github.com/orangeduck/mpc
+**
+** Daniel Holden - contact@daniel-holden.com
+** Licensed under BSD3
+*/
 
-#ifndef __MPC_H
-#define __MPC_H
+#ifndef mpc_h
+#define mpc_h
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -14,60 +17,43 @@
 #include <math.h>
 #include <errno.h>
 
-// State Type
+/*
+** State Type
+*/
+
 typedef struct {
-    int pos;
-    int row;
-    int col;
+  int pos;
+  int row;
+  int col;
 } mpc_state_t;
 
+/*
+** Error Type
+*/
 
-// Error Type
 typedef struct {
-    mpc_state_t state;
-    int expected_num;
-    char *filename;
-    char *failure;
-    char **expected;
-    char recieved;
+  mpc_state_t state;
+  int expected_num;
+  char *filename;
+  char *failure;
+  char **expected;
+  char recieved;
 } mpc_err_t;
 
 void mpc_err_delete(mpc_err_t *e);
-char* mpc_err_string(mpc_err_t *e);
+char *mpc_err_string(mpc_err_t *e);
 void mpc_err_print(mpc_err_t *e);
 void mpc_err_print_to(mpc_err_t *e, FILE *f);
 
+/*
+** Parsing
+*/
 
-// Input Type
-enum {
-    MPC_INPUT_STRING = 0,
-    MPC_INPUT_FILE = 1,
-    MPC_INPUT_PIPE = 2
-};
-
-typedef struct {
-    int type;
-    char *filename;
-    mpc_state_t state;
-
-    char *string;
-    char *buffer;
-    FILE *file;
-
-    int backtrack;
-    int marks_num;
-    mpc_state_t *marks;
-    char *lasts;
-    char last;
-} mpc_input_t;
-
-
-// Parsing
 typedef void mpc_val_t;
 
 typedef union {
-    mpc_err_t *error;
-    mpc_val_t *output;
+  mpc_err_t *error;
+  mpc_val_t *output;
 } mpc_result_t;
 
 struct mpc_parser_t;
@@ -78,16 +64,21 @@ int mpc_parse_file(const char *filename, FILE *file, mpc_parser_t *p, mpc_result
 int mpc_parse_pipe(const char *filename, FILE *pipe, mpc_parser_t *p, mpc_result_t *r);
 int mpc_parse_contents(const char *filename, mpc_parser_t *p, mpc_result_t *r);
 
+/*
+** Function Types
+*/
 
-// Function Types
-typedef void (*mpc_dtor_t)(mpc_val_t *);
-typedef mpc_val_t *(*mpc_ctor_t)(void);
-typedef mpc_val_t *(*mpc_apply_t)(mpc_val_t *);
-typedef mpc_val_t *(*mpc_apply_to_t)(mpc_val_t *, void *);
-typedef mpc_val_t *(*mpc_fold_t)(int, mpc_val_t **);
+typedef void(*mpc_dtor_t)(mpc_val_t*);
+typedef mpc_val_t*(*mpc_ctor_t)(void);
 
+typedef mpc_val_t*(*mpc_apply_t)(mpc_val_t*);
+typedef mpc_val_t*(*mpc_apply_to_t)(mpc_val_t*,void*);
+typedef mpc_val_t*(*mpc_fold_t)(int,mpc_val_t**);
 
-// Building a Parser
+/*
+** Building a Parser
+*/
+
 mpc_parser_t *mpc_new(const char *name);
 mpc_parser_t *mpc_define(mpc_parser_t *p, mpc_parser_t *a);
 mpc_parser_t *mpc_undefine(mpc_parser_t *p);
@@ -197,7 +188,7 @@ mpc_parser_t *mpc_whole(mpc_parser_t *a, mpc_dtor_t da);
 mpc_parser_t *mpc_stripl(mpc_parser_t *a);
 mpc_parser_t *mpc_stripr(mpc_parser_t *a);
 mpc_parser_t *mpc_strip(mpc_parser_t *a);
-mpc_parser_t *mpc_tok(mpc_parser_t *a);
+mpc_parser_t *mpc_tok(mpc_parser_t *a); 
 mpc_parser_t *mpc_sym(const char *s);
 mpc_parser_t *mpc_total(mpc_parser_t *a, mpc_dtor_t da);
 
@@ -255,7 +246,7 @@ mpc_val_t *mpcf_maths(int n, mpc_val_t** xs);
 */
 
 mpc_parser_t *mpc_re(const char *re);
-
+  
 /*
 ** AST
 */
@@ -324,8 +315,8 @@ mpc_err_t *mpca_lang_contents(int flags, const char *filename, ...);
 void mpc_print(mpc_parser_t *p);
 
 int mpc_test_pass(mpc_parser_t *p, const char *s, void *d,
-  int(*tester)(void*, void*),
-  mpc_dtor_t destructor,
+  int(*tester)(void*, void*), 
+  mpc_dtor_t destructor, 
   void(*printer)(void*));
 
 int mpc_test_fail(mpc_parser_t *p, const char *s, void *d,
@@ -334,4 +325,6 @@ int mpc_test_fail(mpc_parser_t *p, const char *s, void *d,
   void(*printer)(void*));
 
 
-#endif  // __MPC_H
+
+#endif
+

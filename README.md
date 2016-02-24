@@ -1,1 +1,1 @@
-Build your own lisp following http://www.buildyourownlisp.com
+Build your own lisp (on Mac OS X) following http://www.buildyourownlisp.com

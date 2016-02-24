@@ -7,8 +7,6 @@
 // Including MPC lib
 #include "mpc.h"
 
-#include "mpc.h"
-
 typedef struct lval {
     int type;
     long number;
@@ -323,7 +321,7 @@ lval *lval_eval_sexpr(lval *v)
     return result;
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
     mpc_parser_t *Number = mpc_new("number");
     mpc_parser_t *Symbol = mpc_new("symbol");
